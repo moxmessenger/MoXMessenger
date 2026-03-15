@@ -21,7 +21,7 @@ color:white;
 overflow:hidden;
 }
 
-/* container fix layar */
+/* container */
 
 .container{
 position:fixed;
@@ -75,7 +75,7 @@ background:#3b82f6;
 color:white;
 }
 
-/* chat layout */
+/* chat */
 
 #chat{
 display:none;
@@ -83,7 +83,7 @@ flex-direction:column;
 height:100%;
 }
 
-/* messages area */
+/* messages */
 
 #messages{
 position:absolute;
@@ -98,7 +98,7 @@ flex-direction:column;
 gap:10px;
 }
 
-/* message bubble */
+/* bubble */
 
 .msg{
 padding:12px 14px;
@@ -139,7 +139,7 @@ font-size:12px;
 opacity:0.6;
 }
 
-/* send box fix bawah */
+/* sendbox */
 
 #sendBox{
 position:absolute;
@@ -268,6 +268,9 @@ let userRef=ref(db,"rooms/"+room+"/users/"+userId);
 set(userRef,true);
 onDisconnect(userRef).remove();
 
+let typingRef=ref(db,"rooms/"+room+"/typing/"+userId);
+onDisconnect(typingRef).remove();
+
 document.getElementById("login").style.display="none";
 document.getElementById("chat").style.display="flex";
 
@@ -306,14 +309,10 @@ let div=document.createElement("div");
 div.classList.add("msg");
 
 if(data.user==userId){
-
 div.classList.add("you");
-
 }else{
-
 div.classList.add("other");
 update(ref(db,"rooms/"+room+"/messages/"+snap.key),{seen:true});
-
 }
 
 div.innerHTML=
@@ -376,6 +375,13 @@ onValue(ref(db,"rooms/"+room+"/users"),snap=>{
 let users=snap.val();
 
 if(!users){
+remove(ref(db,"rooms/"+room));
+return;
+}
+
+let count=Object.keys(users).length;
+
+if(count==0){
 remove(ref(db,"rooms/"+room));
 }
 
