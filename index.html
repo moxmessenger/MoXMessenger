@@ -216,7 +216,6 @@ const db = getDatabase(app);
 let room="";
 let username="";
 let userId=Math.random().toString(36).substring(2);
-let heartbeat;
 
 window.joinRoom = async function(){
 
@@ -246,19 +245,14 @@ return;
 
 let userRef=ref(db,"rooms/"+room+"/users/"+userId);
 
-set(userRef,Date.now());
+set(userRef,true);
 onDisconnect(userRef).remove();
-
-heartbeat=setInterval(()=>{
-set(userRef,Date.now());
-},5000);
 
 document.getElementById("login").style.display="none";
 document.getElementById("chat").style.display="flex";
 
 listenMsg();
 typingListener();
-watchRoom();
 
 }
 
@@ -350,34 +344,27 @@ names.length?names[0]+" sedang mengetik...":"";
 
 }
 
-function watchRoom(){
+/* AUTO CLEAR SAAT TAB DITUTUP */
 
-onValue(ref(db,"rooms/"+room+"/users"),snap=>{
+window.addEventListener("beforeunload", () => {
 
-let users=snap.val();
-
-if(!users){
-remove(ref(db,"rooms/"+room));
-return;
-}
-
-let now=Date.now();
-
-Object.entries(users).forEach(([id,time])=>{
-if(now-time>10000){
-remove(ref(db,"rooms/"+room+"/users/"+id));
-}
-});
-
-let count=Object.keys(users).length;
-
-if(count==0){
-remove(ref(db,"rooms/"+room));
-}
+remove(ref(db,"rooms/"+room+"/messages"));
+remove(ref(db,"rooms/"+room+"/typing/"+userId));
+remove(ref(db,"rooms/"+room+"/users/"+userId));
 
 });
 
+document.addEventListener("visibilitychange", () => {
+
+if(document.visibilityState === "hidden"){
+
+remove(ref(db,"rooms/"+room+"/messages"));
+remove(ref(db,"rooms/"+room+"/typing/"+userId));
+remove(ref(db,"rooms/"+room+"/users/"+userId));
+
 }
+
+});
 
 </script>
 
