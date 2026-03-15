@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>MoxMessenger</title>
 
 <style>
@@ -24,7 +28,7 @@ height:100vh;
 
 .container{
 width:100%;
-max-width:600px;
+max-width:700px;
 height:100vh;
 background:#020617;
 display:flex;
@@ -32,37 +36,38 @@ flex-direction:column;
 }
 
 header{
-padding:15px;
 background:#1e293b;
-font-weight:bold;
+padding:16px;
 text-align:center;
+font-weight:bold;
+font-size:18px;
 }
 
 #login{
 margin:auto;
-text-align:center;
-padding:20px;
+width:90%;
+max-width:320px;
 }
 
 #login input{
 width:100%;
-padding:12px;
+padding:14px;
 margin:8px 0;
-border-radius:8px;
 border:none;
+border-radius:10px;
 background:#1e293b;
 color:white;
+font-size:16px;
 }
 
 #login button{
 width:100%;
-padding:12px;
+padding:14px;
 border:none;
-border-radius:8px;
+border-radius:10px;
 background:#3b82f6;
 color:white;
-font-weight:bold;
-cursor:pointer;
+font-size:16px;
 }
 
 #chat{
@@ -77,14 +82,14 @@ overflow-y:auto;
 padding:15px;
 display:flex;
 flex-direction:column;
-gap:8px;
+gap:10px;
 }
 
 .msg{
-padding:10px 14px;
+padding:12px 15px;
 border-radius:12px;
 max-width:75%;
-word-wrap:break-word;
+font-size:15px;
 }
 
 .you{
@@ -100,46 +105,49 @@ align-self:flex-start;
 .name{
 font-size:12px;
 opacity:0.7;
-margin-bottom:3px;
+margin-bottom:4px;
+}
+
+#typing{
+font-size:12px;
+opacity:0.6;
+padding-left:15px;
 }
 
 #sendBox{
 display:flex;
-gap:6px;
-padding:10px;
+gap:8px;
+padding:12px;
 background:#020617;
 }
 
 #sendBox input{
 flex:1;
-padding:10px;
-border-radius:8px;
+padding:14px;
 border:none;
+border-radius:10px;
 background:#1e293b;
 color:white;
+font-size:16px;
 }
 
 #sendBox button{
-padding:10px 14px;
+padding:14px 18px;
 border:none;
-border-radius:8px;
+border-radius:10px;
 background:#3b82f6;
 color:white;
-cursor:pointer;
+font-size:15px;
 }
 
 .clear{
 background:#ef4444 !important;
 }
 
-@media (min-width:768px){
-
-.container{
-height:90vh;
-border-radius:14px;
-overflow:hidden;
-}
-
+.seen{
+font-size:10px;
+opacity:0.7;
+margin-top:3px;
 }
 
 </style>
@@ -166,6 +174,8 @@ overflow:hidden;
 
 <div id="messages"></div>
 
+<div id="typing"></div>
+
 <div id="sendBox">
 
 <input id="msg" placeholder="Ketik pesan">
@@ -183,7 +193,7 @@ overflow:hidden;
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, push, onChildAdded, remove, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
@@ -192,8 +202,7 @@ databaseURL: "https://moxmessenger-6a5ba-default-rtdb.firebaseio.com",
 projectId: "moxmessenger-6a5ba",
 storageBucket: "moxmessenger-6a5ba.firebasestorage.app",
 messagingSenderId: "865825527710",
-appId: "1:865825527710:web:e9d0fbd29cdc1f40d8e88f",
-measurementId: "G-1Z1L77E72P"
+appId: "1:865825527710:web:e9d0fbd29cdc1f40d8e88f"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -208,43 +217,32 @@ window.joinRoom=function(){
 username=document.getElementById("username").value;
 let code=document.getElementById("roomCode").value;
 
-if(username==""){
-alert("isi nama dulu");
-return;
-}
-
-if(code.length!=4){
-alert("kode harus 4 digit");
-return;
-}
+if(username==""){ alert("isi nama"); return; }
+if(code.length!=4){ alert("kode harus 4 digit"); return; }
 
 room=code;
 
 set(ref(db,"rooms/"+room+"/users/"+userId),true);
 
-onDisconnect(ref(db,"rooms/"+room+"/users/"+userId)).remove();
-
 document.getElementById("login").style.display="none";
 document.getElementById("chat").style.display="flex";
 
 listenMsg();
-checkRoom();
+typingListener();
 
 }
 
 window.sendMsg=function(){
 
 let text=document.getElementById("msg").value;
-
 if(text=="") return;
 
 push(ref(db,"rooms/"+room+"/messages"),{
-
 user:userId,
 name:username,
 msg:text,
+seen:false,
 time:Date.now()
-
 });
 
 document.getElementById("msg").value="";
@@ -260,24 +258,19 @@ let data=snap.val();
 let div=document.createElement("div");
 div.classList.add("msg");
 
-let name=document.createElement("div");
-name.classList.add("name");
-name.innerText=data.name;
-
-let text=document.createElement("div");
-text.innerText=data.msg;
-
-div.appendChild(name);
-div.appendChild(text);
-
 if(data.user==userId){
 div.classList.add("you");
 }else{
 div.classList.add("other");
+update(ref(db,"rooms/"+room+"/messages/"+snap.key),{seen:true});
 }
 
-document.getElementById("messages").appendChild(div);
+div.innerHTML=
+"<div class='name'>"+data.name+"</div>"+
+data.msg+
+"<div class='seen'>"+(data.seen?"✔✔":"✔")+"</div>";
 
+document.getElementById("messages").appendChild(div);
 document.getElementById("messages").scrollTop=999999;
 
 });
@@ -287,20 +280,37 @@ document.getElementById("messages").scrollTop=999999;
 window.clearChat=function(){
 
 remove(ref(db,"rooms/"+room+"/messages"));
-
 document.getElementById("messages").innerHTML="";
 
 }
 
-function checkRoom(){
+const msgInput=document.getElementById("msg");
 
-onValue(ref(db,"rooms/"+room+"/users"),snap=>{
+msgInput.addEventListener("input",()=>{
 
-let users=snap.val();
+set(ref(db,"rooms/"+room+"/typing/"+userId),username);
 
-if(!users){
-remove(ref(db,"rooms/"+room));
+setTimeout(()=>{
+remove(ref(db,"rooms/"+room+"/typing/"+userId));
+},1000);
+
+});
+
+function typingListener(){
+
+onValue(ref(db,"rooms/"+room+"/typing"),snap=>{
+
+let data=snap.val();
+
+if(!data){
+document.getElementById("typing").innerText="";
+return;
 }
+
+let names=Object.values(data).filter(n=>n!==username);
+
+document.getElementById("typing").innerText=
+names.length?names[0]+" sedang mengetik...":"";
 
 });
 
