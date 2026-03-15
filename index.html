@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<title>MoxMessenger</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+font-family:system-ui;
+}
+
+body{
+margin:0;
+background:#0f172a;
+color:white;
+overflow:hidden;
+}
+
+/* container fix layar */
+
+.container{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+display:flex;
+flex-direction:column;
+max-width:800px;
+margin:auto;
+background:#020617;
+}
+
+/* header */
+
+header{
+height:60px;
+display:flex;
+align-items:center;
+justify-content:center;
+background:#1e293b;
+font-weight:bold;
+flex-shrink:0;
+}
+
+/* login */
+
+#login{
+margin:auto;
+width:90%;
+max-width:320px;
+}
+
+#login input{
+width:100%;
+padding:14px;
+margin:8px 0;
+border:none;
+border-radius:10px;
+background:#1e293b;
+color:white;
+}
+
+#login button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:10px;
+background:#3b82f6;
+color:white;
+}
+
+/* chat layout */
+
+#chat{
+display:none;
+flex-direction:column;
+height:100%;
+}
+
+/* messages area */
+
+#messages{
+position:absolute;
+top:60px;
+bottom:90px;
+left:0;
+right:0;
+overflow-y:auto;
+padding:15px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+/* message bubble */
+
+.msg{
+padding:12px 14px;
+border-radius:12px;
+max-width:75%;
+word-wrap:break-word;
+}
+
+.you{
+background:#3b82f6;
+align-self:flex-end;
+}
+
+.other{
+background:#1e293b;
+align-self:flex-start;
+}
+
+.name{
+font-size:12px;
+opacity:0.7;
+margin-bottom:3px;
+}
+
+.seen{
+font-size:10px;
+opacity:0.6;
+margin-top:4px;
+}
+
+/* typing */
+
+#typing{
+position:absolute;
+bottom:90px;
+left:10px;
+font-size:12px;
+opacity:0.6;
+}
+
+/* send box fix bawah */
+
+#sendBox{
+position:absolute;
+bottom:0;
+left:0;
+right:0;
+display:flex;
+gap:8px;
+padding:10px;
+background:#020617;
+border-top:1px solid #1e293b;
+}
+
+#sendBox input{
+flex:1;
+padding:14px;
+border:none;
+border-radius:10px;
+background:#1e293b;
+color:white;
+font-size:16px;
+}
+
+#sendBox button{
+padding:14px 16px;
+border:none;
+border-radius:10px;
+background:#3b82f6;
+color:white;
+}
+
+.clear{
+background:#ef4444 !important;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<header>MoxMessenger</header>
+
+<div id="login">
+
+<input id="username" placeholder="Nama kamu">
+<input id="roomCode" maxlength="4" placeholder="Kode room 4 digit">
+
+<button onclick="joinRoom()">Masuk Chat</button>
+
+</div>
+
+<div id="chat">
+
+<div id="messages"></div>
+
+<div id="typing"></div>
+
+<div id="sendBox">
+
+<input id="msg" placeholder="Ketik pesan">
+<button onclick="sendMsg()">Send</button>
+<button class="clear" onclick="clearChat()">Clear</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
+authDomain: "moxmessenger-6a5ba.firebaseapp.com",
+databaseURL: "https://moxmessenger-6a5ba-default-rtdb.firebaseio.com",
+projectId: "moxmessenger-6a5ba",
+storageBucket: "moxmessenger-6a5ba.firebasestorage.app",
+messagingSenderId: "865825527710",
+appId: "1:865825527710:web:e9d0fbd29cdc1f40d8e88f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let room="";
+let username="";
+let userId=Math.random().toString(36).substring(2);
+
+window.joinRoom = async function(){
+
+username=document.getElementById("username").value;
+room=document.getElementById("roomCode").value;
+
+if(username==""){
+alert("isi nama dulu");
+return;
+}
+
+if(room.length!=4){
+alert("kode harus 4 digit");
+return;
+}
+
+let usersRef=ref(db,"rooms/"+room+"/users");
+let snap=await get(usersRef);
+
+if(snap.exists()){
+
+let count=Object.keys(snap.val()).length;
+
+if(count>=2){
+alert("Room penuh (max 2 orang)");
+return;
+}
+
+}
+
+let userRef=ref(db,"rooms/"+room+"/users/"+userId);
+
+set(userRef,true);
+onDisconnect(userRef).remove();
+
+document.getElementById("login").style.display="none";
+document.getElementById("chat").style.display="flex";
+
+listenMsg();
+typingListener();
+watchRoom();
+
+}
+
+window.sendMsg=function(){
+
+let text=document.getElementById("msg").value;
+if(text=="") return;
+
+push(ref(db,"rooms/"+room+"/messages"),{
+
+user:userId,
+name:username,
+msg:text,
+seen:false,
+time:Date.now()
+
+});
+
+document.getElementById("msg").value="";
+
+}
+
+function listenMsg(){
+
+onChildAdded(ref(db,"rooms/"+room+"/messages"),snap=>{
+
+let data=snap.val();
+
+let div=document.createElement("div");
+div.classList.add("msg");
+
+if(data.user==userId){
+
+div.classList.add("you");
+
+}else{
+
+div.classList.add("other");
+update(ref(db,"rooms/"+room+"/messages/"+snap.key),{seen:true});
+
+}
+
+div.innerHTML=
+"<div class='name'>"+data.name+"</div>"+
+data.msg+
+"<div class='seen'>"+(data.seen?"✔✔":"✔")+"</div>";
+
+let messages=document.getElementById("messages");
+
+messages.appendChild(div);
+messages.scrollTop=messages.scrollHeight;
+
+});
+
+}
+
+window.clearChat=function(){
+
+remove(ref(db,"rooms/"+room+"/messages"));
+document.getElementById("messages").innerHTML="";
+
+}
+
+const msgInput=document.getElementById("msg");
+
+msgInput.addEventListener("input",()=>{
+
+set(ref(db,"rooms/"+room+"/typing/"+userId),username);
+
+setTimeout(()=>{
+remove(ref(db,"rooms/"+room+"/typing/"+userId));
+},1000);
+
+});
+
+function typingListener(){
+
+onValue(ref(db,"rooms/"+room+"/typing"),snap=>{
+
+let data=snap.val();
+
+if(!data){
+document.getElementById("typing").innerText="";
+return;
+}
+
+let names=Object.values(data).filter(n=>n!==username);
+
+document.getElementById("typing").innerText=
+names.length?names[0]+" sedang mengetik...":"";
+
+});
+
+}
+
+function watchRoom(){
+
+onValue(ref(db,"rooms/"+room+"/users"),snap=>{
+
+let users=snap.val();
+
+if(!users){
+remove(ref(db,"rooms/"+room));
+}
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
