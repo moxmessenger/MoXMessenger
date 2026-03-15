@@ -85,7 +85,6 @@ padding:15px;
 display:flex;
 flex-direction:column;
 gap:10px;
-scroll-behavior:smooth;
 }
 
 .msg{
@@ -153,7 +152,6 @@ border:none;
 border-radius:10px;
 background:#3b82f6;
 color:white;
-flex-shrink:0;
 }
 
 .clear{
@@ -314,21 +312,15 @@ document.getElementById("messages").innerHTML="";
 
 }
 
-/* typing indicator */
-
-let typingTimeout;
-
 const msgInput=document.getElementById("msg");
 
 msgInput.addEventListener("input",()=>{
 
 set(ref(db,"rooms/"+room+"/typing/"+userId),username);
 
-clearTimeout(typingTimeout);
-
-typingTimeout=setTimeout(()=>{
+setTimeout(()=>{
 remove(ref(db,"rooms/"+room+"/typing/"+userId));
-},2000);
+},1000);
 
 });
 
@@ -352,12 +344,25 @@ names.length?names[0]+" sedang mengetik...":"";
 
 }
 
-/* keluar tab */
+/* AUTO CLEAR SAAT TAB DITUTUP */
 
 window.addEventListener("beforeunload", () => {
 
-remove(ref(db,"rooms/"+room+"/users/"+userId));
+remove(ref(db,"rooms/"+room+"/messages"));
 remove(ref(db,"rooms/"+room+"/typing/"+userId));
+remove(ref(db,"rooms/"+room+"/users/"+userId));
+
+});
+
+document.addEventListener("visibilitychange", () => {
+
+if(document.visibilityState === "hidden"){
+
+remove(ref(db,"rooms/"+room+"/messages"));
+remove(ref(db,"rooms/"+room+"/typing/"+userId));
+remove(ref(db,"rooms/"+room+"/users/"+userId));
+
+}
 
 });
 
