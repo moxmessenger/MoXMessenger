@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <title>MoxMessenger</title>
 
@@ -23,6 +21,8 @@ background:#0f172a;
 color:white;
 height:100dvh;
 overflow:hidden;
+display:flex;
+justify-content:center;
 }
 
 .container{
@@ -31,7 +31,6 @@ flex-direction:column;
 height:100dvh;
 width:100%;
 max-width:800px;
-margin:auto;
 background:#020617;
 }
 
@@ -196,7 +195,7 @@ background:#ef4444 !important;
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
@@ -225,13 +224,18 @@ if(code.length!=4){ alert("kode harus 4 digit"); return; }
 
 room=code;
 
-set(ref(db,"rooms/"+room+"/users/"+userId),true);
+let userRef=ref(db,"rooms/"+room+"/users/"+userId);
+
+set(userRef,true);
+
+onDisconnect(userRef).remove();
 
 document.getElementById("login").style.display="none";
 document.getElementById("chat").style.display="flex";
 
 listenMsg();
 typingListener();
+watchRoom();
 
 }
 
@@ -314,6 +318,20 @@ let names=Object.values(data).filter(n=>n!==username);
 
 document.getElementById("typing").innerText=
 names.length?names[0]+" sedang mengetik...":"";
+
+});
+
+}
+
+function watchRoom(){
+
+onValue(ref(db,"rooms/"+room+"/users"),snap=>{
+
+let users=snap.val();
+
+if(!users){
+remove(ref(db,"rooms/"+room));
+}
 
 });
 
