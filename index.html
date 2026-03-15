@@ -14,22 +14,20 @@ box-sizing:border-box;
 font-family:system-ui;
 }
 
-body{
+html,body{
 margin:0;
+height:100%;
+overflow:hidden;
 background:#0f172a;
 color:white;
-height:100dvh;
-overflow:hidden;
-display:flex;
-justify-content:center;
 }
 
 .container{
 display:flex;
 flex-direction:column;
-height:100dvh;
-width:100%;
+height:100vh;
 max-width:800px;
+margin:auto;
 background:#020617;
 }
 
@@ -38,7 +36,6 @@ padding:16px;
 background:#1e293b;
 text-align:center;
 font-weight:bold;
-font-size:18px;
 }
 
 #login{
@@ -55,7 +52,6 @@ border:none;
 border-radius:10px;
 background:#1e293b;
 color:white;
-font-size:16px;
 }
 
 #login button{
@@ -65,7 +61,6 @@ border:none;
 border-radius:10px;
 background:#3b82f6;
 color:white;
-font-size:16px;
 }
 
 #chat{
@@ -87,7 +82,7 @@ gap:10px;
 padding:12px 14px;
 border-radius:12px;
 max-width:75%;
-font-size:15px;
+word-wrap:break-word;
 }
 
 .you{
@@ -115,15 +110,16 @@ margin-top:4px;
 #typing{
 font-size:12px;
 opacity:0.6;
-padding:6px 14px;
+padding:6px 15px;
+min-height:18px;
 }
 
 #sendBox{
 display:flex;
 gap:8px;
 padding:10px;
-background:#020617;
 border-top:1px solid #1e293b;
+background:#020617;
 }
 
 #sendBox input{
@@ -142,7 +138,6 @@ border:none;
 border-radius:10px;
 background:#3b82f6;
 color:white;
-font-size:15px;
 }
 
 .clear{
@@ -160,25 +155,21 @@ background:#ef4444 !important;
 <header>MoxMessenger</header>
 
 <div id="login">
-
 <input id="username" placeholder="Nama kamu">
 <input id="roomCode" maxlength="4" placeholder="Kode room 4 digit">
-
 <button onclick="joinRoom()">Masuk Chat</button>
-
 </div>
 
 <div id="chat">
 
 <div id="messages"></div>
+
 <div id="typing"></div>
 
 <div id="sendBox">
-
 <input id="msg" placeholder="Ketik pesan">
 <button onclick="sendMsg()">Send</button>
 <button class="clear" onclick="clearChat()">Clear</button>
-
 </div>
 
 </div>
@@ -218,7 +209,7 @@ return;
 }
 
 if(room.length!=4){
-alert("kode room harus 4 digit");
+alert("kode harus 4 digit");
 return;
 }
 
@@ -253,7 +244,6 @@ watchRoom();
 window.sendMsg=function(){
 
 let text=document.getElementById("msg").value;
-
 if(text=="") return;
 
 push(ref(db,"rooms/"+room+"/messages"),{
@@ -295,9 +285,10 @@ div.innerHTML=
 data.msg+
 "<div class='seen'>"+(data.seen?"✔✔":"✔")+"</div>";
 
-document.getElementById("messages").appendChild(div);
+let messages=document.getElementById("messages");
 
-document.getElementById("messages").scrollTop=999999;
+messages.appendChild(div);
+messages.scrollTop=messages.scrollHeight;
 
 });
 
@@ -349,9 +340,7 @@ onValue(ref(db,"rooms/"+room+"/users"),snap=>{
 let users=snap.val();
 
 if(!users){
-
 remove(ref(db,"rooms/"+room));
-
 }
 
 });
