@@ -21,8 +21,6 @@ color:white;
 overflow:hidden;
 }
 
-/* container */
-
 .container{
 position:fixed;
 top:0;
@@ -36,8 +34,6 @@ margin:auto;
 background:#020617;
 }
 
-/* header */
-
 header{
 height:60px;
 display:flex;
@@ -45,10 +41,7 @@ align-items:center;
 justify-content:center;
 background:#1e293b;
 font-weight:bold;
-flex-shrink:0;
 }
-
-/* login */
 
 #login{
 margin:auto;
@@ -75,15 +68,11 @@ background:#3b82f6;
 color:white;
 }
 
-/* chat */
-
 #chat{
 display:none;
 flex-direction:column;
 height:100%;
 }
-
-/* messages */
 
 #messages{
 position:absolute;
@@ -97,8 +86,6 @@ display:flex;
 flex-direction:column;
 gap:10px;
 }
-
-/* bubble */
 
 .msg{
 padding:12px 14px;
@@ -129,8 +116,6 @@ opacity:0.6;
 margin-top:4px;
 }
 
-/* typing */
-
 #typing{
 position:absolute;
 bottom:90px;
@@ -138,8 +123,6 @@ left:10px;
 font-size:12px;
 opacity:0.6;
 }
-
-/* sendbox */
 
 #sendBox{
 position:absolute;
@@ -233,6 +216,7 @@ const db = getDatabase(app);
 let room="";
 let username="";
 let userId=Math.random().toString(36).substring(2);
+let heartbeat;
 
 window.joinRoom = async function(){
 
@@ -253,23 +237,21 @@ let usersRef=ref(db,"rooms/"+room+"/users");
 let snap=await get(usersRef);
 
 if(snap.exists()){
-
 let count=Object.keys(snap.val()).length;
-
 if(count>=2){
 alert("Room penuh (max 2 orang)");
 return;
 }
-
 }
 
 let userRef=ref(db,"rooms/"+room+"/users/"+userId);
 
-set(userRef,true);
+set(userRef,Date.now());
 onDisconnect(userRef).remove();
 
-let typingRef=ref(db,"rooms/"+room+"/typing/"+userId);
-onDisconnect(typingRef).remove();
+heartbeat=setInterval(()=>{
+set(userRef,Date.now());
+},5000);
 
 document.getElementById("login").style.display="none";
 document.getElementById("chat").style.display="flex";
@@ -378,6 +360,14 @@ if(!users){
 remove(ref(db,"rooms/"+room));
 return;
 }
+
+let now=Date.now();
+
+Object.entries(users).forEach(([id,time])=>{
+if(now-time>10000){
+remove(ref(db,"rooms/"+room+"/users/"+id));
+}
+});
 
 let count=Object.keys(users).length;
 
