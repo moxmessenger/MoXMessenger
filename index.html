@@ -2,33 +2,240 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Private Chat</title>
-<link rel="stylesheet" href="style.css">
+<title>MoxMessenger</title>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<style>
+
+body{
+font-family:sans-serif;
+background:#0f172a;
+color:white;
+text-align:center;
+margin:0;
+}
+
+#login{
+margin-top:120px;
+}
+
+#chat{
+display:none;
+height:100vh;
+display:flex;
+flex-direction:column;
+}
+
+#messages{
+flex:1;
+overflow:auto;
+background:#1e293b;
+padding:15px;
+}
+
+.msg{
+background:#334155;
+padding:10px;
+margin:6px;
+border-radius:8px;
+max-width:70%;
+}
+
+.you{
+background:#3b82f6;
+margin-left:auto;
+}
+
+input{
+padding:12px;
+border:none;
+border-radius:8px;
+width:70%;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:8px;
+background:#3b82f6;
+color:white;
+cursor:pointer;
+}
+
+#sendBox{
+padding:10px;
+background:#020617;
+}
+
+</style>
+
 </head>
 
 <body>
 
 <div id="login">
-<h2>Private Chat</h2>
-<input type="number" id="roomCode" placeholder="Masukan kode 4 digit">
-<button onclick="joinRoom()">Masuk</button>
+
+<h2>MoxMessenger</h2>
+
+<input id="roomCode" maxlength="4" placeholder="Masukan kode 4 digit">
+
+<br><br>
+
+<button onclick="joinRoom()">Mulai Chat</button>
+
 </div>
 
-<div id="chat" style="display:none">
+<div id="chat">
 
 <div id="messages"></div>
 
-<div class="inputBox">
-<input id="msg" placeholder="Ketik pesan">
+<div id="sendBox">
+
+<input id="msg" placeholder="ketik pesan">
+
 <button onclick="sendMsg()">Send</button>
-<button onclick="clearChat()">Clear Chat</button>
-</div>
+
+<button onclick="clearChat()">Clear</button>
 
 </div>
 
-<script src="script.js"></script>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, push, onChildAdded, remove, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
+authDomain: "moxmessenger-6a5ba.firebaseapp.com",
+databaseURL: "https://moxmessenger-6a5ba-default-rtdb.firebaseio.com",
+projectId: "moxmessenger-6a5ba",
+storageBucket: "moxmessenger-6a5ba.firebasestorage.app",
+messagingSenderId: "865825527710",
+appId: "1:865825527710:web:e9d0fbd29cdc1f40d8e88f",
+measurementId: "G-1Z1L77E72P"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let room="";
+let userId=Math.random().toString(36).substring(2);
+
+window.joinRoom=function(){
+
+let code=document.getElementById("roomCode").value;
+
+if(code.length!=4){
+alert("kode harus 4 digit");
+return;
+}
+
+room=code;
+
+let usersRef=ref(db,"rooms/"+room+"/users");
+
+onValue(usersRef,(snap)=>{
+
+let users=snap.val();
+
+if(users){
+
+let count=Object.keys(users).length;
+
+if(count>=2 && !users[userId]){
+alert("Room sudah penuh");
+return;
+}
+
+}
+
+});
+
+set(ref(db,"rooms/"+room+"/users/"+userId),true);
+
+onDisconnect(ref(db,"rooms/"+room+"/users/"+userId)).remove();
+
+document.getElementById("login").style.display="none";
+document.getElementById("chat").style.display="flex";
+
+listenMsg();
+checkRoom();
+
+}
+
+window.sendMsg=function(){
+
+let text=document.getElementById("msg").value;
+
+if(text=="") return;
+
+push(ref(db,"rooms/"+room+"/messages"),{
+
+user:userId,
+msg:text,
+time:Date.now()
+
+});
+
+document.getElementById("msg").value="";
+
+}
+
+function listenMsg(){
+
+onChildAdded(ref(db,"rooms/"+room+"/messages"),snap=>{
+
+let data=snap.val();
+
+let div=document.createElement("div");
+
+div.classList.add("msg");
+
+if(data.user==userId){
+
+div.classList.add("you");
+div.innerHTML="You: "+data.msg;
+
+}else{
+
+div.innerHTML="Stranger: "+data.msg;
+
+}
+
+document.getElementById("messages").appendChild(div);
+
+document.getElementById("messages").scrollTop=999999;
+
+});
+
+}
+
+window.clearChat=function(){
+
+remove(ref(db,"rooms/"+room+"/messages"));
+
+document.getElementById("messages").innerHTML="";
+
+}
+
+function checkRoom(){
+
+onValue(ref(db,"rooms/"+room+"/users"),snap=>{
+
+let users=snap.val();
+
+if(!users){
+
+remove(ref(db,"rooms/"+room));
+
+}
+
+});
+
+}
+
+</script>
+
 </body>
 </html>
