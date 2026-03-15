@@ -3,7 +3,6 @@
 <head>
 
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <title>MoxMessenger</title>
@@ -40,7 +39,6 @@ background:#1e293b;
 text-align:center;
 font-weight:bold;
 font-size:18px;
-flex-shrink:0;
 }
 
 #login{
@@ -126,7 +124,6 @@ gap:8px;
 padding:10px;
 background:#020617;
 border-top:1px solid #1e293b;
-flex-shrink:0;
 }
 
 #sendBox input{
@@ -165,25 +162,21 @@ background:#ef4444 !important;
 <div id="login">
 
 <input id="username" placeholder="Nama kamu">
+<input id="roomCode" maxlength="4" placeholder="Kode room 4 digit">
 
-<input id="roomCode" maxlength="4" placeholder="Kode 4 digit">
-
-<button onclick="joinRoom()">Mulai Chat</button>
+<button onclick="joinRoom()">Masuk Chat</button>
 
 </div>
 
 <div id="chat">
 
 <div id="messages"></div>
-
 <div id="typing"></div>
 
 <div id="sendBox">
 
 <input id="msg" placeholder="Ketik pesan">
-
 <button onclick="sendMsg()">Send</button>
-
 <button class="clear" onclick="clearChat()">Clear</button>
 
 </div>
@@ -195,7 +188,7 @@ background:#ef4444 !important;
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
@@ -211,23 +204,41 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 let room="";
-let userId=Math.random().toString(36).substring(2);
 let username="";
+let userId=Math.random().toString(36).substring(2);
 
-window.joinRoom=function(){
+window.joinRoom = async function(){
 
 username=document.getElementById("username").value;
-let code=document.getElementById("roomCode").value;
+room=document.getElementById("roomCode").value;
 
-if(username==""){ alert("isi nama"); return; }
-if(code.length!=4){ alert("kode harus 4 digit"); return; }
+if(username==""){
+alert("isi nama dulu");
+return;
+}
 
-room=code;
+if(room.length!=4){
+alert("kode room harus 4 digit");
+return;
+}
+
+let usersRef=ref(db,"rooms/"+room+"/users");
+let snap=await get(usersRef);
+
+if(snap.exists()){
+
+let count=Object.keys(snap.val()).length;
+
+if(count>=2){
+alert("Room sudah penuh (max 2 orang)");
+return;
+}
+
+}
 
 let userRef=ref(db,"rooms/"+room+"/users/"+userId);
 
 set(userRef,true);
-
 onDisconnect(userRef).remove();
 
 document.getElementById("login").style.display="none";
@@ -242,14 +253,17 @@ watchRoom();
 window.sendMsg=function(){
 
 let text=document.getElementById("msg").value;
+
 if(text=="") return;
 
 push(ref(db,"rooms/"+room+"/messages"),{
+
 user:userId,
 name:username,
 msg:text,
 seen:false,
 time:Date.now()
+
 });
 
 document.getElementById("msg").value="";
@@ -266,10 +280,14 @@ let div=document.createElement("div");
 div.classList.add("msg");
 
 if(data.user==userId){
+
 div.classList.add("you");
+
 }else{
+
 div.classList.add("other");
 update(ref(db,"rooms/"+room+"/messages/"+snap.key),{seen:true});
+
 }
 
 div.innerHTML=
@@ -278,6 +296,7 @@ data.msg+
 "<div class='seen'>"+(data.seen?"✔✔":"✔")+"</div>";
 
 document.getElementById("messages").appendChild(div);
+
 document.getElementById("messages").scrollTop=999999;
 
 });
@@ -330,7 +349,9 @@ onValue(ref(db,"rooms/"+room+"/users"),snap=>{
 let users=snap.val();
 
 if(!users){
+
 remove(ref(db,"rooms/"+room));
+
 }
 
 });
