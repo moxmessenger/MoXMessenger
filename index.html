@@ -207,6 +207,7 @@ background:#ef4444 !important;
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, push, onChildAdded, remove, onValue, update, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { injectSpeedInsights } from "https://cdn.jsdelivr.net/npm/@vercel/speed-insights@2/dist/index.mjs";
 const firebaseConfig = {
 apiKey: "AIzaSyAi9Fpm0AYulvJjiu__lTjP-xwfFpzIsck",
 authDomain: "moxmessenger-6a5ba.firebaseapp.com",
@@ -219,6 +220,9 @@ appId: "1:865825527710:web:e9d0fbd29cdc1f40d8e88f"
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 let room="";
 let username="";
